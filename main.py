@@ -26,6 +26,8 @@ background_image_end = pygame.transform.scale(background_image_end, (WIDTH, HEIG
 
 current_background = 0
 background = background_images[current_background]
+prev_background = background
+bg_position = 0
 
 tank = pygame.image.load("images/tank.png")
 tank = pygame.transform.scale(tank, (100, 100))
@@ -131,20 +133,22 @@ def pigeon_explosion(x, y, num_particles):
     return particles
 
 def change_background():
-    global current_background, background
+    global current_background, background, prev_background, bg_position
     current_background = (current_background + 1) % len(background_images)
+    prev_background = background
     background = background_images[current_background]
+    bg_position = 800
 
 def end_background():
     global background
     background = background_image_end
 
 def main():
-    global background
-    change_background()
+    global background, bg_position, prev_background
+    # change_background()
     tank_obj = GameObject(WIDTH // 2 - 50, HEIGHT - 120, tank)
     pigeons = [respawn_pigeon() for _ in range(10)]
-
+    background = background_images[current_background]
     bullets = []
     poops = []
     particles = []
@@ -157,7 +161,12 @@ def main():
 
     while running:
         clock.tick(60)
-        win.blit(background, (0, 0))
+        if bg_position <= 0:
+            win.blit(background, (0, 0))
+        else:
+            win.blit(prev_background, (bg_position-WIDTH, 0))
+            win.blit(background, (bg_position, 0))
+            bg_position-=5
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
