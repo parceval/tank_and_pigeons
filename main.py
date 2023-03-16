@@ -14,7 +14,7 @@ BLACK = (0, 0, 0)
 
 # Add the background images to a list
 background_images = [
-    pygame.image.load("images/background1.jpg"),
+    pygame.image.load("images/background1.png"),
     pygame.image.load("images/background2.jpg"),
     pygame.image.load("images/background3.jpg")
 ]
