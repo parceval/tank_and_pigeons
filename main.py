@@ -1,6 +1,7 @@
 import pygame
 import sys
 import random
+import os
 
 pygame.init()
 
@@ -40,6 +41,27 @@ wave_cleared_sound = pygame.mixer.Sound("wave_cleared.wav")
 
 font = pygame.font.Font(None, 36)
 
+LEADERBOARD_FILE = "leaderboard.txt"
+
+def load_leaderboard():
+    if not os.path.exists(LEADERBOARD_FILE):
+        return [0] * 10
+
+    with open(LEADERBOARD_FILE, "r") as f:
+        scores = [int(line.strip()) for line in f.readlines()]
+    return scores
+
+def update_leaderboard(score):
+    scores = load_leaderboard()
+    scores.append(score)
+    scores.sort(reverse=True)
+    scores = scores[:10]
+
+    with open(LEADERBOARD_FILE, "w") as f:
+        for score in scores:
+            f.write(str(score) + "\n")
+    return scores
+
 class GameObject:
     def __init__(self, x, y, image, speed=0):
         self.x = x
@@ -70,9 +92,8 @@ def main():
     bullets = []
     poops = []
     particles = []
-
     score = 0
-    lives = 50
+    lives = 5
     game_over = False
 
     clock = pygame.time.Clock()
@@ -93,6 +114,10 @@ def main():
                     bullets.append(GameObject(tank_obj.x + 40, tank_obj.y, bullet))
                     shoot_sound.play()
                 elif event.key == pygame.K_SPACE and game_over:
+                    updated_scores = update_leaderboard(score)
+                    print("Updated Leaderboard:")
+                    for i, s in enumerate(updated_scores):
+                        print(f"{i + 1}. {s}")
                     main()  # Restart the game
 
         keys = pygame.key.get_pressed()
@@ -122,7 +147,7 @@ def main():
                     scream_sound.play()
                     score += 100
                     particles.extend(pigeon_explosion(p.x, p.y, 10))
-                    pygame.time.set_timer(pygame.USEREVENT + 1, 100)  # Schedule respawn event in 1 second
+                    pygame.time.set_timer(pygame.USEREVENT + 1, 1000)  # Schedule respawn event in 1 second
                     break
 
         for p in pigeons:
@@ -131,7 +156,7 @@ def main():
                 p.speed = -p.speed
                 p.image = pygame.transform.flip(p.image, True, False)
 
-            if random.random() < 0.01 and not game_over:  # 1% chance to poop
+            if not game_over and random.random() < 0.01:  # 1% chance to poop
                 poops.append(GameObject(p.x + 20, p.y + 50, poop))
 
         for poop_obj in poops:
@@ -148,17 +173,8 @@ def main():
         for particle in particles:
             particle.x += particle.speed_x
             particle.y += particle.speed_y
-            particle.speed_y += 0.1  # Apply gravity
             if particle.y > HEIGHT:
                 particles.remove(particle)
-
-        if len(pigeons) == 0:
-            score += 1000
-            wave_cleared_sound.play()
-            pigeons = [respawn_pigeon() for _ in range(10)]
-
-        for particle in particles:
-            particle.draw(win)
 
         tank_obj.draw(win)
         for p in pigeons:
@@ -167,17 +183,20 @@ def main():
             b.draw(win)
         for poop_obj in poops:
             poop_obj.draw(win)
+        for particle in particles:
+            particle.draw(win)
 
         draw_text(f"Score: {score}", 10, 10)
         draw_text(f"Lives: {lives}", 10, 40)
 
+        if len(pigeons) == 0:
+            score += 1000
+            wave_cleared_sound.play()
+            pigeons = [respawn_pigeon() for _ in range(10)]
+
         pygame.display.update()
 
-        # Check for scheduled pigeon respawn event
-        for event in pygame.event.get():
-            if event.type == pygame.USEREVENT + 1:
-                pigeons.append(respawn_pigeon())
-                pigeon_respawn_sound.play()
+    pygame.quit()
 
 if __name__ == "__main__":
     main()
