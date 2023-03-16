@@ -1,0 +1,9 @@
+{
+    "lives": 5,
+    "pigeon_spawn_count": 10,
+    "highscore_points": 1000,
+    "pigeon_speeds": [-3, -2, -1, 1, 2, 3],
+    "poop_chance": 0.01,
+    "bullet_speed": 10,
+    "tank_speed": 5
+}

@@ -12,32 +12,41 @@ pygame.display.set_caption("Tank and Pigeons")
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
-background = pygame.image.load("background.jpg")
-background = pygame.transform.scale(background, (WIDTH, HEIGHT))
+# Add the background images to a list
+background_images = [
+    pygame.image.load("images/background1.jpg"),
+    pygame.image.load("images/background2.jpg"),
+    pygame.image.load("images/background3.jpg")
+]
+for i, bg in enumerate(background_images):
+    background_images[i] = pygame.transform.scale(bg, (WIDTH, HEIGHT))
 
-tank = pygame.image.load("tank.png")
+current_background = 0
+background = background_images[current_background]
+
+tank = pygame.image.load("images/tank.png")
 tank = pygame.transform.scale(tank, (100, 100))
 
-tank_explosion = pygame.image.load("tank_explosion.png")
+tank_explosion = pygame.image.load("images/tank_explosion.png")
 tank_explosion = pygame.transform.scale(tank_explosion, (120, 120))
 
-pigeon = pygame.image.load("pigeon.png")
+pigeon = pygame.image.load("images/pigeon.png")
 pigeon = pygame.transform.scale(pigeon, (50, 50))
 
-bullet = pygame.image.load("bullet.png")
+bullet = pygame.image.load("images/bullet.png")
 bullet = pygame.transform.scale(bullet, (20, 20))
 
-poop = pygame.image.load("poop.png")
+poop = pygame.image.load("images/poop.png")
 poop = pygame.transform.scale(poop, (10, 10))
 
-red_particle = pygame.image.load("red_particle.png")
+red_particle = pygame.image.load("images/red_particle.png")
 red_particle = pygame.transform.scale(red_particle, (12, 12))
 
-shoot_sound = pygame.mixer.Sound("shoot_sound.wav")
-scream_sound = pygame.mixer.Sound("scream_sound.wav")
-tank_hit_sound = pygame.mixer.Sound("tank_hit.wav")
-pigeon_respawn_sound = pygame.mixer.Sound("pigeon_respawn.wav")
-wave_cleared_sound = pygame.mixer.Sound("wave_cleared.wav")
+shoot_sound = pygame.mixer.Sound("sounds/shoot_sound.wav")
+scream_sound = pygame.mixer.Sound("sounds/scream_sound.wav")
+tank_hit_sound = pygame.mixer.Sound("sounds/tank_hit.wav")
+pigeon_respawn_sound = pygame.mixer.Sound("sounds/pigeon_respawn.wav")
+wave_cleared_sound = pygame.mixer.Sound("sounds/wave_cleared.wav")
 
 font = pygame.font.Font(None, 36)
 
@@ -45,22 +54,53 @@ LEADERBOARD_FILE = "leaderboard.txt"
 
 def load_leaderboard():
     if not os.path.exists(LEADERBOARD_FILE):
-        return [0] * 10
+        return [[0,""]] * 10
 
     with open(LEADERBOARD_FILE, "r") as f:
-        scores = [int(line.strip()) for line in f.readlines()]
+        scores = []
+        for line in f.readlines():
+            x = line.strip().split(":") 
+            scores.append([int(x[1]), x[0]])
     return scores
 
-def update_leaderboard(score):
+def update_leaderboard(score, name):
     scores = load_leaderboard()
-    scores.append(score)
-    scores.sort(reverse=True)
+    scores.append((score, name))
+    scores.sort(key=lambda x: x[0], reverse=True)
     scores = scores[:10]
 
     with open(LEADERBOARD_FILE, "w") as f:
-        for score in scores:
-            f.write(str(score) + "\n")
+        for score, name in scores:
+            f.write(f"{name}:{score}\n")
     return scores
+
+def display_leaderboard(win):
+    scores = load_leaderboard()
+    for i, (score, name) in enumerate(scores):
+        draw_text(f"{i + 1}. {name}: {score}", WIDTH // 2 - 100, 50 + i * 30)
+
+def prompt_name():
+    name = ""
+    prompt_text = "Enter your name: "
+    while True:
+        win.blit(background, (0, 0))
+        display_leaderboard(win)
+        draw_text(prompt_text + name, 50, 50)
+
+        pygame.display.update()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    return name
+                elif event.key == pygame.K_BACKSPACE:
+                    name = name[:-1]
+                elif len(name) < 10:
+                    name += event.unicode
 
 class GameObject:
     def __init__(self, x, y, image, speed=0):
@@ -86,9 +126,16 @@ def pigeon_explosion(x, y, num_particles):
         p.speed_y = random.uniform(-2, 2)
     return particles
 
+def change_background():
+    global current_background, background
+    current_background = (current_background + 1) % len(background_images)
+    background = background_images[current_background]
+
 def main():
+    global background
     tank_obj = GameObject(WIDTH // 2 - 50, HEIGHT - 120, tank)
     pigeons = [respawn_pigeon() for _ in range(10)]
+
     bullets = []
     poops = []
     particles = []
@@ -97,8 +144,8 @@ def main():
     game_over = False
 
     clock = pygame.time.Clock()
-
     running = True
+    
     while running:
         clock.tick(60)
         win.blit(background, (0, 0))
@@ -114,10 +161,11 @@ def main():
                     bullets.append(GameObject(tank_obj.x + 40, tank_obj.y, bullet))
                     shoot_sound.play()
                 elif event.key == pygame.K_SPACE and game_over:
-                    updated_scores = update_leaderboard(score)
+                    player_name = prompt_name()
+                    updated_scores = update_leaderboard(score, player_name)
                     print("Updated Leaderboard:")
-                    for i, s in enumerate(updated_scores):
-                        print(f"{i + 1}. {s}")
+                    for i, (s, name) in enumerate(updated_scores):
+                        print(f"{i + 1}. {name}: {s}")
                     main()  # Restart the game
 
         keys = pygame.key.get_pressed()
@@ -131,7 +179,7 @@ def main():
         if lives <= 0:
             game_over = True
             draw_text("GAME OVER", WIDTH // 2 - 100, HEIGHT // 2 - 50)
-            draw_text(f"Final Score: {score}", WIDTH // 2 - 100, HEIGHT // 2)
+            display_leaderboard(win)
             draw_text("Press SPACE to restart", WIDTH // 2 - 150, HEIGHT // 2 + 50)
             tank_obj.image = tank_explosion
 
@@ -193,6 +241,7 @@ def main():
             score += 1000
             wave_cleared_sound.play()
             pigeons = [respawn_pigeon() for _ in range(10)]
+            change_background()
 
         pygame.display.update()
 
