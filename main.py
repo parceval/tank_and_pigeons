@@ -127,6 +127,7 @@ def pigeon_explosion(x, y, num_particles):
     for p in particles:
         p.speed_x = random.uniform(-2, 2)
         p.speed_y = random.uniform(-2, 2)
+        p.age = 0
     return particles
 
 def change_background():
@@ -202,7 +203,7 @@ def main():
                     pigeons.remove(p)
                     scream_sound.play()
                     score += 1
-                    particles.extend(pigeon_explosion(p.x, p.y, 10))
+                    particles.extend(pigeon_explosion(p.x, p.y, int(random.uniform(10, 100))))
                     pygame.time.set_timer(pygame.USEREVENT + 1, 1000)  # Schedule respawn event in 1 second
                     break
 
@@ -228,7 +229,9 @@ def main():
 
         for particle in particles:
             particle.x += particle.speed_x
-            particle.y += particle.speed_y
+            particle.y += particle.speed_y + (0.1 * particle.age)
+            particle.age+=1
+
             if particle.y > HEIGHT:
                 particles.remove(particle)
 
