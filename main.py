@@ -137,7 +137,7 @@ def change_background():
     current_background = (current_background + 1) % len(background_images)
     prev_background = background
     background = background_images[current_background]
-    bg_position = 800
+    bg_position = WIDTH
 
 def end_background():
     global background
