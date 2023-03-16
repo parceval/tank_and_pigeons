@@ -1,5 +1,3 @@
-#!/bin/env python3
-
 import pygame
 import sys
 import random
@@ -13,8 +11,14 @@ pygame.display.set_caption("Tank and Pigeons")
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
+background = pygame.image.load("background.jpg")
+background = pygame.transform.scale(background, (WIDTH, HEIGHT))
+
 tank = pygame.image.load("tank.png")
 tank = pygame.transform.scale(tank, (100, 100))
+
+tank_explosion = pygame.image.load("tank_explosion.png")
+tank_explosion = pygame.transform.scale(tank_explosion, (120, 120))
 
 pigeon = pygame.image.load("pigeon.png")
 pigeon = pygame.transform.scale(pigeon, (50, 50))
@@ -24,6 +28,9 @@ bullet = pygame.transform.scale(bullet, (20, 20))
 
 poop = pygame.image.load("poop.png")
 poop = pygame.transform.scale(poop, (10, 10))
+
+red_particle = pygame.image.load("red_particle.png")
+red_particle = pygame.transform.scale(red_particle, (5, 5))
 
 shoot_sound = pygame.mixer.Sound("shoot_sound.wav")
 scream_sound = pygame.mixer.Sound("scream_sound.wav")
@@ -49,21 +56,29 @@ def draw_text(text, x, y, color=BLACK):
     text_surface = font.render(text, True, color)
     win.blit(text_surface, (x, y))
 
+def pigeon_explosion(x, y, num_particles):
+    particles = [GameObject(x, y, red_particle) for _ in range(num_particles)]
+    for p in particles:
+        p.speed = random.uniform(-2, 2)
+    return particles
+
 def main():
     tank_obj = GameObject(WIDTH // 2 - 50, HEIGHT - 120, tank)
     pigeons = [respawn_pigeon() for _ in range(10)]
     bullets = []
     poops = []
+    particles = []
 
     score = 0
     lives = 5
+    game_over = False
 
     clock = pygame.time.Clock()
 
     running = True
     while running:
         clock.tick(60)
-        win.fill(WHITE)
+        win.blit(background, (0, 0))
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -72,22 +87,24 @@ def main():
                 sys.exit()
 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
+                if event.key == pygame.K_SPACE and not game_over:
                     bullets.append(GameObject(tank_obj.x + 40, tank_obj.y, bullet))
                     shoot_sound.play()
+                elif event.key == pygame.K_SPACE and game_over:
+                    main()  # Restart the game
 
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT] and tank_obj.x > 0:
+        if keys[pygame.K_LEFT] and tank_obj.x > 0 and not game_over:
             tank_obj.x -= 5
-        if keys[pygame.K_RIGHT] and tank_obj.x < WIDTH - 100:
+        if keys[pygame.K_RIGHT] and tank_obj.x < WIDTH - 100 and not game_over:
             tank_obj.x += 5
 
         if lives <= 0:
+            game_over = True
             draw_text("GAME OVER", WIDTH // 2 - 100, HEIGHT // 2 - 50)
             draw_text(f"Final Score: {score}", WIDTH // 2 - 100, HEIGHT // 2)
-            pygame.display.update()
-            pygame.time.delay(3000)
-            break
+            draw_text("Press SPACE to restart", WIDTH // 2 - 150, HEIGHT // 2 + 50)
+            tank_obj.image = tank_explosion
 
         for b in bullets:
             b.y -= 10
@@ -100,7 +117,8 @@ def main():
                     pigeons.remove(p)
                     scream_sound.play()
                     score += 100
-                    pygame.time.set_timer(pygame.USEREVENT + 1, 1000)  # Schedule respawn event in 1 second
+                    particles.extend(pigeon_explosion(p.x, p.y, 10))
+                    pygame.time.set_timer(pygame.USEREVENT + 1, 100)  # Schedule respawn event in 1 second
                     break
 
         for p in pigeons:
@@ -123,6 +141,12 @@ def main():
                 tank_hit_sound.play()
                 break
 
+        for particle in particles:
+            particle.x += particle.speed
+            particle.y += particle.speed
+            if particle.y > HEIGHT:
+                particles.remove(particle)
+
         tank_obj.draw(win)
         for p in pigeons:
             p.draw(win)
@@ -130,6 +154,8 @@ def main():
             b.draw(win)
         for poop_obj in poops:
             poop_obj.draw(win)
+        for particle in particles:
+            particle.draw(win)
 
         draw_text(f"Score: {score}", 10, 10)
         draw_text(f"Lives: {lives}", 10, 40)
