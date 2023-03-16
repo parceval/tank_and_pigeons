@@ -30,12 +30,13 @@ poop = pygame.image.load("poop.png")
 poop = pygame.transform.scale(poop, (10, 10))
 
 red_particle = pygame.image.load("red_particle.png")
-red_particle = pygame.transform.scale(red_particle, (5, 5))
+red_particle = pygame.transform.scale(red_particle, (12, 12))
 
 shoot_sound = pygame.mixer.Sound("shoot_sound.wav")
 scream_sound = pygame.mixer.Sound("scream_sound.wav")
 tank_hit_sound = pygame.mixer.Sound("tank_hit.wav")
 pigeon_respawn_sound = pygame.mixer.Sound("pigeon_respawn.wav")
+wave_cleared_sound = pygame.mixer.Sound("wave_cleared.wav")
 
 font = pygame.font.Font(None, 36)
 
@@ -59,7 +60,8 @@ def draw_text(text, x, y, color=BLACK):
 def pigeon_explosion(x, y, num_particles):
     particles = [GameObject(x, y, red_particle) for _ in range(num_particles)]
     for p in particles:
-        p.speed = random.uniform(-2, 2)
+        p.speed_x = random.uniform(-2, 2)
+        p.speed_y = random.uniform(-2, 2)
     return particles
 
 def main():
@@ -70,7 +72,7 @@ def main():
     particles = []
 
     score = 0
-    lives = 5
+    lives = 50
     game_over = False
 
     clock = pygame.time.Clock()
@@ -96,8 +98,10 @@ def main():
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT] and tank_obj.x > 0 and not game_over:
             tank_obj.x -= 5
+            tank_obj.image = pygame.transform.flip(tank, True, False)
         if keys[pygame.K_RIGHT] and tank_obj.x < WIDTH - 100 and not game_over:
             tank_obj.x += 5
+            tank_obj.image = pygame.transform.flip(tank, False, False)
 
         if lives <= 0:
             game_over = True
@@ -127,7 +131,7 @@ def main():
                 p.speed = -p.speed
                 p.image = pygame.transform.flip(p.image, True, False)
 
-            if random.random() < 0.01:  # 1% chance to poop
+            if random.random() < 0.01 and not game_over:  # 1% chance to poop
                 poops.append(GameObject(p.x + 20, p.y + 50, poop))
 
         for poop_obj in poops:
@@ -142,10 +146,19 @@ def main():
                 break
 
         for particle in particles:
-            particle.x += particle.speed
-            particle.y += particle.speed
+            particle.x += particle.speed_x
+            particle.y += particle.speed_y
+            particle.speed_y += 0.1  # Apply gravity
             if particle.y > HEIGHT:
                 particles.remove(particle)
+
+        if len(pigeons) == 0:
+            score += 1000
+            wave_cleared_sound.play()
+            pigeons = [respawn_pigeon() for _ in range(10)]
+
+        for particle in particles:
+            particle.draw(win)
 
         tank_obj.draw(win)
         for p in pigeons:
@@ -154,8 +167,6 @@ def main():
             b.draw(win)
         for poop_obj in poops:
             poop_obj.draw(win)
-        for particle in particles:
-            particle.draw(win)
 
         draw_text(f"Score: {score}", 10, 10)
         draw_text(f"Lives: {lives}", 10, 40)
