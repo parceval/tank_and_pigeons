@@ -21,6 +21,9 @@ background_images = [
 for i, bg in enumerate(background_images):
     background_images[i] = pygame.transform.scale(bg, (WIDTH, HEIGHT))
 
+background_image_end = pygame.image.load("images/background_end.png")
+background_image_end = pygame.transform.scale(background_image_end, (WIDTH, HEIGHT))
+
 current_background = 0
 background = background_images[current_background]
 
@@ -59,7 +62,7 @@ def load_leaderboard():
     with open(LEADERBOARD_FILE, "r") as f:
         scores = []
         for line in f.readlines():
-            x = line.strip().split(":") 
+            x = line.strip().split(":")
             scores.append([int(x[1]), x[0]])
     return scores
 
@@ -77,7 +80,7 @@ def update_leaderboard(score, name):
 def display_leaderboard(win):
     scores = load_leaderboard()
     for i, (score, name) in enumerate(scores):
-        draw_text(f"{i + 1}. {name}: {score}", WIDTH // 2 - 100, 50 + i * 30)
+        draw_text(f"{i + 1}. {name}: {score}", WIDTH // 2 - 100, 50 + i * 30, "WHITE")
 
 def prompt_name():
     name = ""
@@ -85,7 +88,7 @@ def prompt_name():
     while True:
         win.blit(background, (0, 0))
         display_leaderboard(win)
-        draw_text(prompt_text + name, 50, 50)
+        draw_text(prompt_text + name,  WIDTH // 2 - 200, HEIGHT // 2 + 90, "WHITE")
 
         pygame.display.update()
 
@@ -131,8 +134,13 @@ def change_background():
     current_background = (current_background + 1) % len(background_images)
     background = background_images[current_background]
 
+def end_background():
+    global background
+    background = background_image_end
+
 def main():
     global background
+    change_background()
     tank_obj = GameObject(WIDTH // 2 - 50, HEIGHT - 120, tank)
     pigeons = [respawn_pigeon() for _ in range(10)]
 
@@ -145,7 +153,7 @@ def main():
 
     clock = pygame.time.Clock()
     running = True
-    
+
     while running:
         clock.tick(60)
         win.blit(background, (0, 0))
@@ -163,7 +171,6 @@ def main():
                 elif event.key == pygame.K_SPACE and game_over:
                     player_name = prompt_name()
                     updated_scores = update_leaderboard(score, player_name)
-                    print("Updated Leaderboard:")
                     for i, (s, name) in enumerate(updated_scores):
                         print(f"{i + 1}. {name}: {s}")
                     main()  # Restart the game
@@ -178,9 +185,10 @@ def main():
 
         if lives <= 0:
             game_over = True
-            draw_text("GAME OVER", WIDTH // 2 - 100, HEIGHT // 2 - 50)
+            end_background()
+            draw_text("GAME OVER", WIDTH // 2 - 100, HEIGHT // 2 + 90, "WHITE")
             display_leaderboard(win)
-            draw_text("Press SPACE to restart", WIDTH // 2 - 150, HEIGHT // 2 + 50)
+            draw_text("Press SPACE to restart", WIDTH // 2 - 150, HEIGHT // 2 + 140, "WHITE")
             tank_obj.image = tank_explosion
 
         for b in bullets:
@@ -193,7 +201,7 @@ def main():
                     bullets.remove(b)
                     pigeons.remove(p)
                     scream_sound.play()
-                    score += 100
+                    score += 1
                     particles.extend(pigeon_explosion(p.x, p.y, 10))
                     pygame.time.set_timer(pygame.USEREVENT + 1, 1000)  # Schedule respawn event in 1 second
                     break
@@ -225,20 +233,22 @@ def main():
                 particles.remove(particle)
 
         tank_obj.draw(win)
-        for p in pigeons:
-            p.draw(win)
-        for b in bullets:
-            b.draw(win)
-        for poop_obj in poops:
-            poop_obj.draw(win)
-        for particle in particles:
-            particle.draw(win)
+        if not game_over:
+            for p in pigeons:
+                p.draw(win)
+            for b in bullets:
+                b.draw(win)
+            for poop_obj in poops:
+                poop_obj.draw(win)
+            for particle in particles:
+                particle.draw(win)
 
-        draw_text(f"Score: {score}", 10, 10)
-        draw_text(f"Lives: {lives}", 10, 40)
+        if not game_over:
+            draw_text(f"Score: {score}", 10, 10, "PURPLE")
+            draw_text(f"Lives: {lives if lives > 0 else '0'}", 10, 40, "PURPLE")
 
         if len(pigeons) == 0:
-            score += 1000
+            score += 10
             wave_cleared_sound.play()
             pigeons = [respawn_pigeon() for _ in range(10)]
             change_background()
