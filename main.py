@@ -185,7 +185,7 @@ def main():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE and not game_over:
                     bullets.append(GameObject(tank_obj.x + 40, tank_obj.y, bullet))
-                    shoot_sound.play()
+                    pygame.mixer.Channel(2).play(shoot_sound)
                 elif event.key == pygame.K_SPACE and game_over:
                     player_name = prompt_name()
                     update_leaderboard(score, player_name)
@@ -206,7 +206,7 @@ def main():
 
         if lives <= 0:
             if not game_over:
-                tank_explosion_sound.play()
+                pygame.mixer.Channel(3).play(tank_explosion_sound)
                 end_idle_time = pygame.time.get_ticks()
                 tank_obj.image = tank_explosion
             game_over = True
@@ -225,7 +225,7 @@ def main():
                 if b.x < p.x + 50 and b.x > p.x - 20 and b.y < p.y + 50 and b.y > p.y - 20:
                     bullets.remove(b)
                     pigeons.remove(p)
-                    scream_sound.play()
+                    pygame.mixer.Channel(4).play(scream_sound)
                     score += 1
                     particles.extend(pigeon_explosion(p.x, p.y, int(random.uniform(10, 100))))
                     pygame.time.set_timer(pygame.USEREVENT + 1, 1000)  # Schedule respawn event in 1 second
@@ -249,7 +249,7 @@ def main():
                 poops.remove(poop_obj)
                 lives -= 1
                 hit_time = pygame.time.get_ticks()
-                tank_hit_sound.play()
+                pygame.mixer.Channel(6).play(tank_hit_sound)
                 break
 
         for particle in particles:
@@ -277,7 +277,7 @@ def main():
 
         if len(pigeons) == 0:
             score += 10
-            wave_cleared_sound.play()
+            pygame.mixer.Channel(5).play(wave_cleared_sound)
             pigeons = [respawn_pigeon() for _ in range(10)]
             change_background()
 
