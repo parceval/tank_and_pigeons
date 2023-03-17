@@ -5,6 +5,6 @@ marcus:2300
 marcus:2100
 xxx:300
 karsten:200
-:0
-:0
-:0
+doddl:23
+ :9
+xxx:6

@@ -29,8 +29,11 @@ background = background_images[current_background]
 prev_background = background
 bg_position = 0
 
-tank = pygame.image.load("images/tank.png")
-tank = pygame.transform.scale(tank, (100, 100))
+tank_clean = pygame.image.load("images/tank_clean.png")
+tank_clean = pygame.transform.scale(tank_clean, (100, 100))
+
+tank_hit = pygame.image.load("images/tank_hit.png")
+tank_hit = pygame.transform.scale(tank_hit, (100, 100))
 
 tank_explosion = pygame.image.load("images/tank_explosion.png")
 tank_explosion = pygame.transform.scale(tank_explosion, (120, 120))
@@ -50,6 +53,7 @@ red_particle = pygame.transform.scale(red_particle, (12, 12))
 shoot_sound = pygame.mixer.Sound("sounds/shoot_sound.wav")
 scream_sound = pygame.mixer.Sound("sounds/scream_sound.wav")
 tank_hit_sound = pygame.mixer.Sound("sounds/tank_hit.wav")
+tank_explosion_sound = pygame.mixer.Sound("sounds/tank_explosion.wav")
 pigeon_respawn_sound = pygame.mixer.Sound("sounds/pigeon_respawn.wav")
 wave_cleared_sound = pygame.mixer.Sound("sounds/wave_cleared.wav")
 
@@ -146,7 +150,7 @@ def end_background():
 def main():
     global background, bg_position, prev_background
     # change_background()
-    tank_obj = GameObject(WIDTH // 2 - 50, HEIGHT - 120, tank)
+    tank_obj = GameObject(WIDTH // 2 - 50, HEIGHT - 120, tank_clean)
     pigeons = [respawn_pigeon() for _ in range(10)]
     background = background_images[current_background]
     bullets = []
@@ -155,6 +159,9 @@ def main():
     score = 0
     lives = 5
     game_over = False
+    hit_time = None
+    end_idle_time = None
+    tank_img = tank_clean
 
     clock = pygame.time.Clock()
     running = True
@@ -166,7 +173,7 @@ def main():
         else:
             win.blit(prev_background, (bg_position-WIDTH, 0))
             win.blit(background, (bg_position, 0))
-            bg_position-=5
+            bg_position-=40
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -180,26 +187,34 @@ def main():
                     shoot_sound.play()
                 elif event.key == pygame.K_SPACE and game_over:
                     player_name = prompt_name()
-                    updated_scores = update_leaderboard(score, player_name)
-                    for i, (s, name) in enumerate(updated_scores):
-                        print(f"{i + 1}. {name}: {s}")
+                    update_leaderboard(score, player_name)
                     main()  # Restart the game
+
+        if hit_time is not None and pygame.time.get_ticks() - hit_time < 1000:
+            tank_img = tank_hit
+        else:
+            tank_img = tank_clean
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT] and tank_obj.x > 0 and not game_over:
             tank_obj.x -= 5
-            tank_obj.image = pygame.transform.flip(tank, True, False)
+            tank_obj.image = pygame.transform.flip(tank_img, True, False)
         if keys[pygame.K_RIGHT] and tank_obj.x < WIDTH - 100 and not game_over:
             tank_obj.x += 5
-            tank_obj.image = pygame.transform.flip(tank, False, False)
+            tank_obj.image = pygame.transform.flip(tank_img, False, False)
 
         if lives <= 0:
+            if not game_over:
+                tank_explosion_sound.play()
+                end_idle_time = pygame.time.get_ticks()
+                tank_obj.image = tank_explosion
             game_over = True
-            end_background()
-            draw_text("GAME OVER", WIDTH // 2 - 100, HEIGHT // 2 + 90, "WHITE")
-            display_leaderboard(win)
-            draw_text("Press SPACE to restart", WIDTH // 2 - 150, HEIGHT // 2 + 140, "WHITE")
-            tank_obj.image = tank_explosion
+            if end_idle_time is not None and pygame.time.get_ticks() - end_idle_time > 1000:
+                tank_obj.image = tank_clean
+                end_background()
+                draw_text("GAME OVER", WIDTH // 2 - 100, HEIGHT // 2 + 90, "RED")
+                display_leaderboard(win)
+                draw_text("Press SPACE to restart", WIDTH // 2 - 150, HEIGHT // 2 + 140, "WHITE")
 
         for b in bullets:
             b.y -= 10
@@ -233,6 +248,7 @@ def main():
             if tank_obj.x < poop_obj.x + 10 and tank_obj.x + 100 > poop_obj.x and tank_obj.y < poop_obj.y + 10 and tank_obj.y + 100 > poop_obj.y:
                 poops.remove(poop_obj)
                 lives -= 1
+                hit_time = pygame.time.get_ticks()
                 tank_hit_sound.play()
                 break
 
