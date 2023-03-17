@@ -167,6 +167,7 @@ def main():
     running = True
 
     while running:
+        end_idle = True if end_idle_time is not None and pygame.time.get_ticks() - end_idle_time > 1000 else False
         clock.tick(60)
         if bg_position <= 0:
             win.blit(background, (0, 0))
@@ -209,8 +210,7 @@ def main():
                 end_idle_time = pygame.time.get_ticks()
                 tank_obj.image = tank_explosion
             game_over = True
-            if end_idle_time is not None and pygame.time.get_ticks() - end_idle_time > 1000:
-                tank_obj.image = tank_clean
+            if end_idle:
                 end_background()
                 draw_text("GAME OVER", WIDTH // 2 - 100, HEIGHT // 2 + 90, "RED")
                 display_leaderboard(win)
@@ -260,7 +260,7 @@ def main():
             if particle.y > HEIGHT:
                 particles.remove(particle)
 
-        tank_obj.draw(win)
+        if not end_idle or not game_over: tank_obj.draw(win)
         if not game_over:
             for p in pigeons:
                 p.draw(win)
