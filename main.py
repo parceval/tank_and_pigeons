@@ -134,6 +134,7 @@ def pigeon_explosion(x, y, num_particles):
         p.speed_x = random.uniform(-2, 2)
         p.speed_y = random.uniform(-2, 2)
         p.age = 0
+        p.landed=False
     return particles
 
 def change_background():
@@ -253,12 +254,14 @@ def main():
                 break
 
         for particle in particles:
-            particle.x += particle.speed_x
-            particle.y += particle.speed_y + (0.1 * particle.age)
+            if particle.landed == False:
+                particle.x += particle.speed_x
+                particle.y += particle.speed_y + (0.1 * particle.age)
             particle.age+=1
 
-            if particle.y > HEIGHT:
-                particles.remove(particle)
+            if particle.y > HEIGHT - int(random.uniform(10, 50)):
+                particle.landed=True;
+                # particles.remove(particle)
 
         if not end_idle or not game_over: tank_obj.draw(win)
         if not game_over:
@@ -280,6 +283,7 @@ def main():
             pygame.mixer.Channel(5).play(wave_cleared_sound)
             pigeons = [respawn_pigeon() for _ in range(10)]
             change_background()
+            particles=[]
 
         pygame.display.update()
 
